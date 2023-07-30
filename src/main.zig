@@ -58,8 +58,8 @@ pub fn main() !void {
     std.debug.print("╠═══════ ELEMENT ═══════╣\n", .{});
     std.debug.print("║                       ║\n", .{});
     std.debug.print("╟───────── TAG ─────────╢\n", .{});
-    std.debug.print("║ group         {s}   \t║\n", .{fmt.bytesToHex(group, Case.lower)});
-    std.debug.print("║ element       {s}   \t║\n", .{fmt.bytesToHex(element, Case.lower)});
+    std.debug.print("║ group         {s}   \t║\n", .{fmt.fmtSliceHexLower(&group)});
+    std.debug.print("║ element       {s}   \t║\n", .{fmt.fmtSliceHexLower(&element)});
     std.debug.print("╟─────── VR / VL ───────╢\n", .{});
     std.debug.print("║ VR            {s}   \t║\n", .{&vr});
     std.debug.print("║ VL            {d}   \t║\n", .{vl});
