@@ -4,7 +4,6 @@ const mem = std.mem;
 const io = std.io;
 
 const File = std.fs.File;
-const Endian = std.builtin.Endian;
 const Case = fmt.Case;
 
 const path = "samples/IM-0001-0001.dcm";
@@ -15,9 +14,13 @@ const DICOMError = error{
     NoMagicWord,
 };
 
-const Element = struct { tag: Tag, vr: [2]u8, vl: u16, value: u32 };
+// See Chapter 7 on Data Set, Data Elements and Data Element Fields
+// https://dicom.nema.org/medical/dicom/current/output/html/part05.html#chapter_7
+const DataSet = struct { elements: []DataElement };
+const DataElement = struct { tag: Tag, vr: [2]u8, vl: u16, value: u32 };
 const Tag = struct { group: [2]u8, element: [2]u8 };
 
+// TODO pass CLI flags and stuff
 pub fn main() !void {
     std.debug.print("⚡︎ Zig DICOM v{s}\n\n", .{"0.1.0"});
 
@@ -37,7 +40,7 @@ pub fn main() !void {
 
     // now we must read a tag + value (collectively called an element)
 
-    // Must read metadata as LittleEndian explicit VR
+    // Must read metadata as LittleEndian explicit VR, BigEndian has been retired (see PS3.5 2016b)
     // Read the length of the metadata elements: (0002,0000) MetaElementGroupLength
     const element = try readElement(file_reader);
     const tag = element.tag;
@@ -45,7 +48,7 @@ pub fn main() !void {
     std.debug.print("\n", .{});
     std.debug.print("╔═══════ PREAMBLE ══════╗\n", .{});
     std.debug.print("║  0x00(×128)         \t║\n", .{});
-    std.debug.print("║  MAGIC_WORD   ✔️     \t║\n", .{});
+    std.debug.print("║  MAGIC_WORD   yes   \t║\n", .{});
     std.debug.print("╠═══════ ELEMENT ═══════╣\n", .{});
     std.debug.print("║                       ║\n", .{});
     std.debug.print("╟───────── TAG ─────────╢\n", .{});
@@ -71,7 +74,7 @@ fn verifyPreamble(reader: File.Reader) !void {
     }
 }
 
-fn readElement(reader: File.Reader) !Element {
+fn readElement(reader: File.Reader) !DataElement {
     const tag = try readTag(reader);
 
     // Explicit Transfer Syntax, read 2 byte VR:
@@ -81,7 +84,7 @@ fn readElement(reader: File.Reader) !Element {
     // now read the value based on the VR and VL
     const value = try reader.readIntLittle(u32);
 
-    return Element{ .tag = tag, .vr = vr, .vl = vl, .value = value };
+    return DataElement{ .tag = tag, .vr = vr, .vl = vl, .value = value };
 }
 
 fn readTag(reader: File.Reader) !Tag {
