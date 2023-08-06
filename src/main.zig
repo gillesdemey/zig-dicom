@@ -29,14 +29,9 @@ pub fn main() !void {
     std.debug.print("file\t\t{s}\n", .{path});
     std.debug.print("size\t\t{s}\n", .{fmt.fmtIntSizeDec(file_size)});
 
-    try dicom_reader.verifyPreamble(file_reader);
+    const elements = try dicom_reader.readHeader(file_reader);
 
-    // now we must read a tag + value (collectively called an element)
-
-    // Must read metadata as LittleEndian explicit VR, BigEndian has been retired (see PS3.5 2016b)
-    // Read the length of the metadata elements: (0002,0000) MetaElementGroupLength
-    const element = try dicom_reader.readElement(file_reader);
-    const tag = element.tag;
+    const groupLengthElement = elements[0];
 
     std.debug.print("\n", .{});
     std.debug.print("╔═══════ PREAMBLE ══════╗\n", .{});
@@ -45,12 +40,12 @@ pub fn main() !void {
     std.debug.print("╠═══════ ELEMENT ═══════╣\n", .{});
     std.debug.print("║                       ║\n", .{});
     std.debug.print("╟───────── TAG ─────────╢\n", .{});
-    std.debug.print("║ group    \t0x{x:0>4}  ║\n", .{tag.group});
-    std.debug.print("║ element  \t0x{x:0>4}  ║\n", .{tag.element});
+    std.debug.print("║ group    \t0x{x:0>4}  ║\n", .{groupLengthElement.tag.group});
+    std.debug.print("║ element  \t0x{x:0>4}  ║\n", .{groupLengthElement.tag.element});
     std.debug.print("╟─────── VR / VL ───────╢\n", .{});
-    std.debug.print("║ VR            {s}   \t║\n", .{&element.vr});
-    std.debug.print("║ VL            {d}   \t║\n", .{element.vl});
+    std.debug.print("║ VR            {s}   \t║\n", .{&groupLengthElement.vr});
+    std.debug.print("║ VL            {d}   \t║\n", .{groupLengthElement.vl});
     std.debug.print("╟──────── VALUE ────────╢\n", .{});
-    std.debug.print("║ value         {any} \t║\n", .{element.value});
+    std.debug.print("║ value         {any} \t║\n", .{groupLengthElement.value});
     std.debug.print("╚═══════════════════════╝\n", .{});
 }
