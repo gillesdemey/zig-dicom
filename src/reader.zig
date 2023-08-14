@@ -1,9 +1,11 @@
 const std = @import("std");
-const File = @import("std").fs.File;
 const mem = @import("std").mem;
 const ArrayList = @import("std").ArrayList;
 const dicom_types = @import("types.zig");
 
+const fixedBufferStream = std.io.fixedBufferStream;
+
+const DataSet = dicom_types.DataSet;
 const DataElement = dicom_types.DataElement;
 const Tag = dicom_types.Tag;
 
@@ -16,7 +18,7 @@ const DICOMError = error{
 
 // check the preamble
 // (first 132 bytes, 128 empty bytes + 4 byte magic word, DICM)
-fn verifyPreamble(reader: File.Reader) !void {
+fn verifyPreamble(reader: anytype) !void {
     try reader.skipBytes(128, .{}); // skip 128 bytes
 
     // check for the DICM magic string
@@ -28,7 +30,7 @@ fn verifyPreamble(reader: File.Reader) !void {
 
 // this function will read the DICOM file header
 // TODO maybe we want a faster allocator than std.heap.page_allocator
-pub fn readHeader(reader: File.Reader) ![]DataElement {
+pub fn readHeader(reader: anytype) !DataSet {
     // start by verifying the preamble to see if we're dealing with a valid DICOM file
     try verifyPreamble(reader);
 
@@ -48,15 +50,24 @@ pub fn readHeader(reader: File.Reader) ![]DataElement {
     defer headerElements.deinit();
     try headerElements.append(groupLengthElement);
 
-    // while (buffer.len > 0) {
-    //     std.debug.print("{d}\n", .{buffer.len});
-    // }
+    // now we just have to read x bytes in to memory and parse them as elements
+    var fbs = fixedBufferStream(buffer);
 
-    // return slice of data elements
-    return try headerElements.toOwnedSlice();
+    // we'll keep reading until we get a EndOFStream, which indicates our buffer stream is
+    // empty and we've exhausted our header elements
+    while (readElement(fbs.reader())) |element| {
+        try headerElements.append(element);
+    } else |err| {
+        // we'll return all of the elements we've reached the end of the stream
+        if (err == error.EndOfStream) {
+            return try headerElements.toOwnedSlice();
+        }
+        // any other error is just returned and should be handled
+        return err;
+    }
 }
 
-pub fn readElement(reader: File.Reader) !DataElement {
+pub fn readElement(reader: anytype) !DataElement {
     return DataElement{
         .tag = try readTag(reader),
         // Explicit Transfer Syntax, read 2 byte VR
@@ -68,7 +79,7 @@ pub fn readElement(reader: File.Reader) !DataElement {
     };
 }
 
-fn readTag(reader: File.Reader) !Tag {
+fn readTag(reader: anytype) !Tag {
     return Tag{
         // Group Number
         .group = try reader.readIntLittle(u16),
