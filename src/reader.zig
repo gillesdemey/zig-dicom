@@ -8,6 +8,8 @@ const fixedBufferStream = std.io.fixedBufferStream;
 const DataSet = dicom_types.DataSet;
 const DataElement = dicom_types.DataElement;
 const Tag = dicom_types.Tag;
+const Reader = std.io.GenericReader;
+const LittleEndian = std.builtin.Endian.little;
 
 const MAGIC_WORD = "DICM";
 
@@ -73,17 +75,17 @@ pub fn readElement(reader: anytype) !DataElement {
         // Explicit Transfer Syntax, read 2 byte VR
         .vr = try reader.readBytesNoEof(2),
         // Now read the VL based on the VR (UL) (16-bit unsigned integer)
-        .vl = try reader.readIntLittle(u16),
+        .vl = try reader.readInt(u16, LittleEndian),
         // now read value based on vr and vl
-        .value = try reader.readIntLittle(u32),
+        .value = try reader.readInt(u32, LittleEndian),
     };
 }
 
 fn readTag(reader: anytype) !Tag {
     return Tag{
         // Group Number
-        .group = try reader.readIntLittle(u16),
+        .group = try reader.readInt(u16, LittleEndian),
         // Element Number
-        .element = try reader.readIntLittle(u16),
+        .element = try reader.readInt(u16, LittleEndian),
     };
 }
