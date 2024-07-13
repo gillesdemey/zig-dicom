@@ -1,6 +1,7 @@
 const std = @import("std");
 const dicom_reader = @import("reader.zig");
 const dicom_types = @import("types.zig");
+const decoder = @import("decoder.zig");
 
 const DataElement = dicom_types;
 
@@ -11,25 +12,15 @@ const io = std.io;
 const File = std.fs.File;
 const Case = fmt.Case;
 
-const path = "samples/IM-0001-0001.dcm";
+const TEST_PATH = "samples/IM-0001-0001.dcm";
 
 // TODO pass CLI flags and stuff
 pub fn main() !void {
     std.debug.print("⚡︎ Zig DICOM v{s}\n\n", .{"0.1.0"});
 
-    // 1. open file, read some metadata and get a file reader
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
+    std.debug.print("file\t\t{s}\n", .{TEST_PATH});
 
-    const file_meta = try file.metadata();
-
-    const file_size = file_meta.size();
-    const file_reader = file.reader();
-
-    std.debug.print("file\t\t{s}\n", .{path});
-    std.debug.print("size\t\t{s}\n", .{fmt.fmtIntSizeDec(file_size)});
-
-    const dataset = try dicom_reader.readHeader(file_reader);
+    const dataset = try decoder.decode(TEST_PATH);
 
     std.debug.print("\n", .{});
     std.debug.print("╔═══════ PREAMBLE ══════╗\n", .{});
